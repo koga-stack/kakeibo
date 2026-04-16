@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>家計簿</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --text: #f0f0f0;
+    --text-sub: #888;
+    --accent: #c8f060;
+    --accent-dim: rgba(200,240,96,0.12);
+    --red: #ff5f5f;
+    --red-dim: rgba(255,95,95,0.12);
+    --blue: #60b4f0;
+    --yellow: #f0c860;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+    max-width: 430px;
+    margin: 0 auto;
+    padding-bottom: 80px;
+  }
+  .header {
+    padding: 20px 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .header-title { font-size: 11px; letter-spacing: 2px; color: var(--text-sub); text-transform: uppercase; }
+  .header-month { font-size: 28px; font-weight: 700; letter-spacing: -1px; margin-top: 2px; }
+  .month-nav { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .month-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    width: 32px; height: 32px; border-radius: 50%; font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .summary {
+    margin: 16px 20px 0;
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid var(--border);
+  }
+  .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .summary-row:last-child { margin-bottom: 0; }
+  .summary-label { font-size: 12px; color: var(--text-sub); }
+  .summary-val { font-family: 'DM Mono', monospace; font-size: 15px; }
+  .summary-val.positive { color: var(--accent); }
+  .summary-val.negative { color: var(--red); }
+  .progress-wrap { margin-top: 12px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-sub); margin-bottom: 6px; }
+  .progress-bar { background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.5s ease; }
+  .progress-fill.over { background: var(--red); }
+  .tabs {
+    display: flex;
+    margin: 16px 20px 0;
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 3px;
+    border: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1; padding: 8px 4px; text-align: center; font-size: 12px; font-weight: 500;
+    border-radius: 8px; cursor: pointer; transition: all 0.2s; color: var(--text-sub);
+  }
+  .tab.active { background: var(--accent); color: #0f0f0f; font-weight: 700; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .add-form { padding: 16px 20px; }
+  .field-label { font-size: 11px; letter-spacing: 1px; color: var(--text-sub); text-transform: uppercase; margin-bottom: 8px; }
+  .amount-display {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 16px; text-align: center; margin-bottom: 16px;
+  }
+  .amount-display .yen { font-size: 14px; color: var(--text-sub); vertical-align: super; margin-right: 4px; }
+  .amount-display .amount-val { font-family: 'DM Mono', monospace; font-size: 40px; font-weight: 500; letter-spacing: -2px; }
+  .amount-display .amount-val.has-value { color: var(--accent); }
+  .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .num-btn {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    color: var(--text); font-size: 18px; font-family: 'DM Mono', monospace;
+    height: 56px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.1s; user-select: none;
+  }
+  .num-btn:active { background: var(--surface2); transform: scale(0.95); }
+  .num-btn.del { font-size: 20px; }
+  .num-btn.clear { background: var(--red-dim); border-color: var(--red); color: var(--red); font-size: 13px; }
+  .presets { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .preset-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 6px 14px; font-size: 13px;
+    font-family: 'DM Mono', monospace; color: var(--text-sub); cursor: pointer;
+  }
+  .category-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .cat-btn {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 8px; text-align: center; cursor: pointer; transition: all 0.15s;
+  }
+  .cat-btn.selected { background: var(--accent-dim); border-color: var(--accent); }
+  .cat-icon { font-size: 20px; margin-bottom: 4px; }
+  .cat-name { font-size: 11px; color: var(--text-sub); line-height: 1.3; }
+  .cat-btn.selected .cat-name { color: var(--accent); }
+  .pay-methods { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .pay-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 7px 16px; font-size: 13px; color: var(--text-sub); cursor: pointer;
+  }
+  .pay-btn.selected { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .memo-input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif; font-size: 14px; margin-bottom: 16px; outline: none; resize: none;
+  }
+  .memo-input:focus { border-color: var(--accent); }
+  .memo-input::placeholder { color: var(--text-sub); }
+  .submit-btn {
+    width: 100%; background: var(--accent); color: #0f0f0f; border: none; border-radius: 14px;
+    padding: 16px; font-size: 15px; font-weight: 700; font-family: 'Noto Sans JP', sans-serif; cursor: pointer;
+  }
+  .submit-btn:disabled { background: var(--surface2); color: var(--text-sub); }
+  .history-list { padding: 0 20px; }
+  .history-day { margin-bottom: 20px; }
+  .history-date { font-size: 11px; letter-spacing: 1px; color: var(--text-sub); margin-bottom: 8px; padding-left: 4px; font-family: 'DM Mono', monospace; }
+  .tx-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 6px;
+  }
+  .tx-cat-icon { font-size: 20px; flex-shrink: 0; }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-sub { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+  .tx-amount { font-family: 'DM Mono', monospace; font-size: 15px; flex-shrink: 0; }
+  .budget-list { padding: 0 20px; }
+  .budget-section-title { font-size: 11px; letter-spacing: 2px; color: var(--text-sub); text-transform: uppercase; margin: 16px 0 8px 4px; }
+  .budget-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
+  .budget-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .budget-name { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .budget-used { font-family: 'DM Mono', monospace; font-size: 13px; }
+  .budget-total { font-size: 11px; color: var(--text-sub); font-family: 'DM Mono', monospace; }
+  .budget-bar { background: var(--surface2); border-radius: 3px; height: 4px; overflow: hidden; }
+  .budget-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+  .budget-fill.low { background: var(--accent); }
+  .budget-fill.mid { background: var(--yellow); }
+  .budget-fill.high { background: var(--red); }
+  .budget-pct { font-size: 10px; color: var(--text-sub); text-align: right; margin-top: 4px; font-family: 'DM Mono', monospace; }
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--accent); color: #0f0f0f; padding: 12px 24px; border-radius: 50px;
+    font-size: 13px; font-weight: 700; opacity: 0; transition: all 0.3s; z-index: 999; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    background: rgba(15,15,15,0.95); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border); display: flex; padding: 0 16px 4px; z-index: 100;
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    padding: 10px 4px 6px; cursor: pointer; color: var(--text-sub); gap: 3px;
+  }
+  .nav-item.active { color: var(--accent); }
+  .nav-icon { font-size: 22px; }
+  .nav-label { font-size: 10px; letter-spacing: 0.5px; }
+  .section-header { padding: 16px 20px 0; display: flex; justify-content: space-between; align-items: center; }
+  .section-header-title { font-size: 18px; font-weight: 700; }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text-sub); font-size: 14px; }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="header">
+  <div>
+    <div class="header-title">家計簿</div>
+    <div class="header-month" id="headerMonth"></div>
+  </div>
+  <div class="month-nav">
+    <button class="month-btn" onclick="changeMonth(-1)">‹</button>
+    <button class="month-btn" onclick="changeMonth(1)">›</button>
+  </div>
+</div>
+<div class="summary">
+  <div class="summary-row">
+    <span class="summary-label">今月の支出</span>
+    <span class="summary-val" id="totalSpent">¥0</span>
+  </div>
+  <div class="summary-row">
+    <span class="summary-label">予算合計</span>
+    <span class="summary-val">¥445,000</span>
+  </div>
+  <div class="summary-row">
+    <span class="summary-label">残り</span>
+    <span class="summary-val positive" id="remaining">¥445,000</span>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>支出進捗</span>
+      <span id="progressPct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+</div>
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('add')">＋ 入力</div>
+  <div class="tab" onclick="switchTab('history')">履歴</div>
+  <div class="tab" onclick="switchTab('budget')">予算</div>
+</div>
+<div class="section active" id="tab-add">
+  <div class="add-form">
+    <div class="field-label">金額</div>
+    <div class="amount-display">
+      <span class="yen">¥</span>
+      <span class="amount-val" id="amountDisplay">0</span>
+    </div>
+    <div class="presets">
+      <button class="preset-btn" onclick="addPreset(500)">500</button>
+      <button class="preset-btn" onclick="addPreset(1000)">1,000</button>
+      <button class="preset-btn" onclick="addPreset(3000)">3,000</button>
+      <button class="preset-btn" onclick="addPreset(5000)">5,000</button>
+      <button class="preset-btn" onclick="addPreset(10000)">10,000</button>
+    </div>
+    <div class="numpad">
+      <button class="num-btn" onclick="numInput('7')">7</button>
+      <button class="num-btn" onclick="numInput('8')">8</button>
+      <button class="num-btn" onclick="numInput('9')">9</button>
+      <button class="num-btn" onclick="numInput('4')">4</button>
+      <button class="num-btn" onclick="numInput('5')">5</button>
+      <button class="num-btn" onclick="numInput('6')">6</button>
+      <button class="num-btn" onclick="numInput('1')">1</button>
+      <button class="num-btn" onclick="numInput('2')">2</button>
+      <button class="num-btn" onclick="numInput('3')">3</button>
+      <button class="num-btn clear" onclick="numInput('clear')">CLR</button>
+      <button class="num-btn" onclick="numInput('0')">0</button>
+      <button class="num-btn del" onclick="numInput('del')">⌫</button>
+    </div>
+    <div class="field-label">カテゴリ</div>
+    <div class="category-grid" id="categoryGrid"></div>
+    <div class="field-label">支払方法</div>
+    <div class="pay-methods" id="payMethods"></div>
+    <div class="field-label">メモ（任意）</div>
+    <textarea class="memo-input" id="memoInput" placeholder="例：ラーメン、コンビニ…" rows="2"></textarea>
+    <button class="submit-btn" id="submitBtn" onclick="submitTransaction()" disabled>記録する</button>
+  </div>
+</div>
+<div class="section" id="tab-history">
+  <div class="section-header">
+    <div class="section-header-title">支出履歴</div>
+  </div>
+  <div class="history-list" id="historyList" style="margin-top:16px;"></div>
+</div>
+<div class="section" id="tab-budget">
+  <div class="budget-list" id="budgetList"></div>
+</div>
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-add" onclick="switchTab('add')">
+    <div class="nav-icon">＋</div>
+    <div class="nav-label">入力</div>
+  </div>
+  <div class="nav-item" id="nav-history" onclick="switchTab('history')">
+    <div class="nav-icon">📋</div>
+    <div class="nav-label">履歴</div>
+  </div>
+  <div class="nav-item" id="nav-budget" onclick="switchTab('budget')">
+    <div class="nav-icon">📊</div>
+    <div class="nav-label">予算</div>
+  </div>
+</div>
+<script>
+const CATEGORIES = [
+  { id: 'dining_solo', name: '自炊', icon: '🍳', budget: 20000, type: '変動費' },
+  { id: 'dining_conv', name: '外食・コンビニ', icon: '🍜', budget: 10000, type: '変動費' },
+  { id: 'dining_friend', name: '交際費', icon: '🍻', budget: 25000, type: '変動費' },
+  { id: 'dining_daughter', name: '娘との時間', icon: '👧', budget: 20000, type: '固定費' },
+  { id: 'cafe', name: 'カフェ', icon: '☕', budget: 3000, type: '変動費' },
+  { id: 'sakuyu', name: '咲結', icon: '💝', budget: 20000, type: '固定費' },
+  { id: 'recovery', name: 'サウナ・整体', icon: '♨️', budget: 20000, type: '変動費' },
+  { id: 'living', name: '生活雑費', icon: '🛒', budget: 10000, type: '変動費' },
+  { id: 'beauty', name: '美容室', icon: '✂️', budget: 8000, type: '変動費' },
+  { id: 'supplement', name: 'サプリメント', icon: '💊', budget: 7500, type: '変動費' },
+  { id: 'medicine', name: '治療薬', icon: '🏥', budget: 22550, type: '変動費' },
+  { id: 'transport', name: 'Suica・交通', icon: '🚃', budget: 22000, type: '固定費' },
+  { id: 'mobile', name: '携帯', icon: '📱', budget: 5000, type: '固定費' },
+  { id: 'insurance', name: '保険', icon: '🛡️', budget: 10000, type: '固定費' },
+  { id: 'saving_travel', name: '旅行積立', icon: '✈️', budget: 12500, type: '積立' },
+  { id: 'saving_clothes', name: '服積立', icon: '👔', budget: 8500, type: '積立' },
+  { id: 'offering', name: '仏壇花', icon: '🌸', budget: 1950, type: '変動費' },
+  { id: 'misc', name: '予備・その他', icon: '📦', budget: 20000, type: '変動費' },
+];
+const PAYMENT_METHODS = ['AMEX', '三井住友', 'PayPay', '現金'];
+const FIXED_COSTS = [
+  { name: '養育費', amount: 50000 },
+  { name: '家賃', amount: 20000 },
+  { name: '車ローン', amount: 36000 },
+  { name: '名古屋新幹線', amount: 40000 },
+  { name: 'iDeCo', amount: 23000 },
+  { name: '現金貯蓄', amount: 50000 },
+];
+const INCOME = 445000;
+let currentAmount = '';
+let selectedCategory = null;
+let selectedPayment = PAYMENT_METHODS[0];
+let currentMonth = new Date();
+currentMonth.setDate(1);
+let transactions = JSON.parse(localStorage.getItem('kakeibo_tx') || '[]');
+function init() {
+  renderCategories();
+  renderPaymentMethods();
+  updateHeader();
+  updateSummary();
+  renderHistory();
+  renderBudget();
+}
+function renderCategories() {
+  const grid = document.getElementById('categoryGrid');
+  grid.innerHTML = CATEGORIES.map(c => `
+    <div class="cat-btn" id="cat-${c.id}" onclick="selectCategory('${c.id}')">
+      <div class="cat-icon">${c.icon}</div>
+      <div class="cat-name">${c.name}</div>
+    </div>
+  `).join('');
+}
+function renderPaymentMethods() {
+  const wrap = document.getElementById('payMethods');
+  wrap.innerHTML = PAYMENT_METHODS.map(p => `
+    <button class="pay-btn ${p === selectedPayment ? 'selected' : ''}" onclick="selectPayment('${p}')">${p}</button>
+  `).join('');
+}
+function changeMonth(dir) {
+  currentMonth.setMonth(currentMonth.getMonth() + dir);
+  updateHeader();
+  updateSummary();
+  renderHistory();
+  renderBudget();
+}
+function updateHeader() {
+  const y = currentMonth.getFullYear();
+  const m = currentMonth.getMonth() + 1;
+  document.getElementById('headerMonth').textContent = `${y}年${m}月`;
+}
+function monthKey(date) {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function currentMonthKey() { return monthKey(currentMonth); }
+function numInput(val) {
+  if (val === 'clear') { currentAmount = ''; }
+  else if (val === 'del') { currentAmount = currentAmount.slice(0, -1); }
+  else {
+    if (currentAmount.length >= 7) return;
+    if (currentAmount === '0') currentAmount = val;
+    else currentAmount += val;
+  }
+  updateAmountDisplay();
+  checkSubmit();
+}
+function addPreset(n) {
+  const current = parseInt(currentAmount || '0');
+  currentAmount = String(current + n);
+  updateAmountDisplay();
+  checkSubmit();
+}
+function updateAmountDisplay() {
+  const val = parseInt(currentAmount || '0');
+  const el = document.getElementById('amountDisplay');
+  el.textContent = val.toLocaleString('ja-JP');
+  el.classList.toggle('has-value', val > 0);
+}
+function selectCategory(id) {
+  selectedCategory = id;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('cat-' + id)?.classList.add('selected');
+  checkSubmit();
+}
+function selectPayment(p) {
+  selectedPayment = p;
+  document.querySelectorAll('.pay-btn').forEach(b => b.classList.remove('selected'));
+  event.target.classList.add('selected');
+}
+function checkSubmit() {
+  const amount = parseInt(currentAmount || '0');
+  document.getElementById('submitBtn').disabled = !(amount > 0 && selectedCategory);
+}
+function submitTransaction() {
+  const amount = parseInt(currentAmount || '0');
+  if (!amount || !selectedCategory) return;
+  const cat = CATEGORIES.find(c => c.id === selectedCategory);
+  const now = new Date();
+  const tx = {
+    id: Date.now(),
+    date: now.toISOString(),
+    amount,
+    categoryId: selectedCategory,
+    categoryName: cat.name,
+    categoryIcon: cat.icon,
+    payment: selectedPayment,
+    memo: document.getElementById('memoInput').value.trim(),
+    type: cat.type,
+  };
+  transactions.unshift(tx);
+  localStorage.setItem('kakeibo_tx', JSON.stringify(transactions));
+  currentAmount = '';
+  updateAmountDisplay();
+  selectedCategory = null;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('memoInput').value = '';
+  document.getElementById('submitBtn').disabled = true;
+  updateSummary();
+  showToast(`${cat.icon} ${cat.name} ¥${amount.toLocaleString()} を記録しました`);
+}
+function getMonthTransactions() {
+  const key = currentMonthKey();
+  return transactions.filter(tx => monthKey(tx.date) === key);
+}
+function updateSummary() {
+  const txs = getMonthTransactions();
+  const spent = txs.reduce((sum, tx) => sum + tx.amount, 0);
+  const remaining = INCOME - spent;
+  const pct = Math.min(Math.round(spent / INCOME * 100), 100);
+  document.getElementById('totalSpent').textContent = '¥' + spent.toLocaleString();
+  const remEl = document.getElementById('remaining');
+  remEl.textContent = '¥' + Math.abs(remaining).toLocaleString() + (remaining < 0 ? ' 超過' : '');
+  remEl.className = 'summary-val ' + (remaining < 0 ? 'negative' : 'positive');
+  document.getElementById('progressPct').textContent = pct + '%';
+  const fill = document.getElementById('progressFill');
+  fill.style.width = pct + '%';
+  fill.classList.toggle('over', pct >= 100);
+}
+function renderHistory() {
+  const txs = getMonthTransactions();
+  const list = document.getElementById('historyList');
+  if (txs.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div>まだ記録がありません</div>`;
+    return;
+  }
+  const groups = {};
+  txs.forEach(tx => {
+    const d = new Date(tx.date);
+    const key = `${d.getMonth()+1}月${d.getDate()}日`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(tx);
+  });
+  list.innerHTML = Object.entries(groups).map(([date, items]) => `
+    <div class="history-day">
+      <div class="history-date">${date}</div>
+      ${items.map(tx => `
+        <div class="tx-item" onclick="deleteTx(${tx.id})">
+          <div class="tx-cat-icon">${tx.categoryIcon}</div>
+          <div class="tx-info">
+            <div class="tx-name">${tx.memo || tx.categoryName}</div>
+            <div class="tx-sub">${tx.categoryName} · ${tx.payment}</div>
+          </div>
+          <div class="tx-amount">¥${tx.amount.toLocaleString()}</div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+function deleteTx(id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  transactions = transactions.filter(tx => tx.id !== id);
+  localStorage.setItem('kakeibo_tx', JSON.stringify(transactions));
+  updateSummary();
+  renderHistory();
+  renderBudget();
+}
+function renderBudget() {
+  const txs = getMonthTransactions();
+  const list = document.getElementById('budgetList');
+  const types = ['変動費', '固定費', '積立'];
+  let html = '';
+  types.forEach(type => {
+    const cats = CATEGORIES.filter(c => c.type === type);
+    if (!cats.length) return;
+    html += `<div class="budget-section-title">${type}</div>`;
+    cats.forEach(cat => {
+      const spent = txs.filter(tx => tx.categoryId === cat.id).reduce((s, tx) => s + tx.amount, 0);
+      const pct = cat.budget > 0 ? Math.min(Math.round(spent / cat.budget * 100), 100) : 0;
+      const fillClass = pct < 70 ? 'low' : pct < 90 ? 'mid' : 'high';
+      html += `
+        <div class="budget-item">
+          <div class="budget-top">
+            <div class="budget-name">${cat.icon} ${cat.name}</div>
+            <div class="budget-amounts">
+              <div class="budget-used" style="color:${pct>=100?'var(--red)':pct>=70?'var(--yellow)':'var(--text)'}"">¥${spent.toLocaleString()}</div>
+              <div class="budget-total">/ ¥${cat.budget.toLocaleString()}</div>
+            </div>
+          </div>
+          <div class="budget-bar"><div class="budget-fill ${fillClass}" style="width:${pct}%"></div></div>
+          <div class="budget-pct">${pct}%</div>
+        </div>
+      `;
+    });
+  });
+  html += `<div class="budget-section-title">固定出費（自動）</div>`;
+  FIXED_COSTS.forEach(fc => {
+    html += `
+      <div class="budget-item">
+        <div class="budget-top">
+          <div class="budget-name">🔒 ${fc.name}</div>
+          <div class="budget-amounts">
+            <div class="budget-used">¥${fc.amount.toLocaleString()}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  list.innerHTML = html;
+}
+function switchTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  const tabIndex = ['add','history','budget'].indexOf(tab);
+  document.querySelectorAll('.tab')[tabIndex].classList.add('active');
+  document.getElementById('nav-' + tab).classList.add('active');
+  if (tab === 'history') renderHistory();
+  if (tab === 'budget') renderBudget();
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+init();
+</script>
+</body>
+</html>
